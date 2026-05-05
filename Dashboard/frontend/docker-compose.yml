@@ -1,0 +1,14 @@
+version: '3.8'
+
+services:
+  frontend:
+    build: .
+    volumes:
+      - ./src:/app/src
+      - ./public:/app/public
+    ports:
+      - "3007:3000"
+    environment:
+      - NODE_ENV=development
+      - WDS_SOCKET_PORT=0
+      - REACT_APP_API_BASE_URL=/locations

@@ -1,0 +1,45 @@
+version: '3.8'
+
+services:
+  mapserver:
+    build:
+      context: ./mapserver
+      dockerfile: ./environments/development/Dockerfile
+    container_name: mapserver
+    ports:
+      - "8080:8080"
+    volumes:
+      # Mount shared TIFF files 
+      - ./mapserver/shared/tifs:/data/tifs:ro
+      # Mount shared mapfiles read-only 
+      - ./mapserver/shared/mapfile.map:/data/mapfile.map:ro
+      # Mount development logs (read-write)
+      - ./logs/development:/tmp/logs:rw
+    environment:
+      - MS_MAPFILE=/data/mapfile.map
+      - MS_MODE=browse
+    restart: unless-stopped
+
+  ui:
+    build:
+      context: ./frontend
+      dockerfile: dockerfile
+    container_name: react-ui
+    ports:
+      - "3002:3000"
+    volumes:
+      # Hot reload support for development
+      - ./frontend/src:/app/src
+      - ./frontend/public:/app/public
+      # Prevent node_modules from being overwritten
+      - /app/node_modules
+    environment:
+      - NODE_ENV=development
+      - WDS_SOCKET_PORT=0
+      - CHOKIDAR_USEPOLLING=true
+    depends_on:
+      - mapserver
+      # Uncomment when health check is working:
+      # mapserver:
+      #   condition: service_healthy
+    restart: unless-stopped

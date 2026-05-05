@@ -1,0 +1,242 @@
+[
+  {
+    "filename": "Alexandreias_Peach_2023.tif",
+    "commune": "Alexandreias",
+    "croptype": "Peach",
+    "year": "2023",
+    "area_ha": "5076.41",
+    "area_stremma": "50764.1"
+  },
+  {
+    "filename": "Alexandreias_Peach_2024.tif",
+    "commune": "Alexandreias",
+    "croptype": "Peach",
+    "year": "2024",
+    "area_ha": "3577.65",
+    "area_stremma": "35776.5"
+  },
+  {
+    "filename": "Domokou_Tomato_2023.tif",
+    "commune": "Domokou",
+    "croptype": "Tomato",
+    "year": "2023",
+    "area_ha": "750.88",
+    "area_stremma": "7508.8"
+  },
+  {
+    "filename": "Domokou_Tomato_2024.tif",
+    "commune": "Domokou",
+    "croptype": "Tomato",
+    "year": "2024",
+    "area_ha": "871.16",
+    "area_stremma": "8711.6"
+  },
+  {
+    "filename": "Domokou_Tomato_2025.tif",
+    "commune": "Domokou",
+    "croptype": "Tomato",
+    "year": "2025",
+    "area_ha": "1521.55",
+    "area_stremma": "15215.5"
+  },
+  {
+    "filename": "Farsalon_Cotton_2022.tif",
+    "commune": "Farsalon",
+    "croptype": "Cotton",
+    "year": "2022",
+    "area_ha": "1448.93",
+    "area_stremma": "14489.3"
+  },
+  {
+    "filename": "Farsalon_Cotton_2023.tif",
+    "commune": "Farsalon",
+    "croptype": "Cotton",
+    "year": "2023",
+    "area_ha": "1951.57",
+    "area_stremma": "19515.7"
+  },
+  {
+    "filename": "Farsalon_Cotton_2024.tif",
+    "commune": "Farsalon",
+    "croptype": "Cotton",
+    "year": "2024",
+    "area_ha": "1565.18",
+    "area_stremma": "15651.8"
+  },
+  {
+    "filename": "Farsalon_Cotton_2025.tif",
+    "commune": "Farsalon",
+    "croptype": "Cotton",
+    "year": "2025",
+    "area_ha": "1076.11",
+    "area_stremma": "10761.1"
+  },
+  {
+    "filename": "Farsalon_Tomato_2022.tif",
+    "commune": "Farsalon",
+    "croptype": "Tomato",
+    "year": "2022",
+    "area_ha": "2498.99",
+    "area_stremma": "24989.9"
+  },
+  {
+    "filename": "Farsalon_Tomato_2023.tif",
+    "commune": "Farsalon",
+    "croptype": "Tomato",
+    "year": "2023",
+    "area_ha": "2001.95",
+    "area_stremma": "20019.5"
+  },
+  {
+    "filename": "Farsalon_Tomato_2024.tif",
+    "commune": "Farsalon",
+    "croptype": "Tomato",
+    "year": "2024",
+    "area_ha": "3638.17",
+    "area_stremma": "36381.7"
+  },
+  {
+    "filename": "Kileler_Cotton_2022.tif",
+    "commune": "Kileler",
+    "croptype": "Cotton",
+    "year": "2022",
+    "area_ha": "1961.91",
+    "area_stremma": "19619.1"
+  },
+  {
+    "filename": "Kileler_Cotton_2023.tif",
+    "commune": "Kileler",
+    "croptype": "Cotton",
+    "year": "2023",
+    "area_ha": "1977.55",
+    "area_stremma": "19775.5"
+  },
+  {
+    "filename": "Kileler_Cotton_2024.tif",
+    "commune": "Kileler",
+    "croptype": "Cotton",
+    "year": "2024",
+    "area_ha": "1921.35",
+    "area_stremma": "19213.5"
+  },
+  {
+    "filename": "Kileler_Tomato_2022.tif",
+    "commune": "Kileler",
+    "croptype": "Tomato",
+    "year": "2022",
+    "area_ha": "3095.26",
+    "area_stremma": "30952.6"
+  },
+  {
+    "filename": "Kileler_Tomato_2023.tif",
+    "commune": "Kileler",
+    "croptype": "Tomato",
+    "year": "2023",
+    "area_ha": "966.67",
+    "area_stremma": "9666.7"
+  },
+  {
+    "filename": "Kileler_Tomato_2024.tif",
+    "commune": "Kileler",
+    "croptype": "Tomato",
+    "year": "2024",
+    "area_ha": "2273.64",
+    "area_stremma": "22736.4"
+  },
+  {
+    "filename": "Kilkis_Wheat_2023.tif",
+    "commune": "Kilkis",
+    "croptype": "Wheat",
+    "year": "2023",
+    "area_ha": "15611.51",
+    "area_stremma": "156115.1"
+  },
+  {
+    "filename": "Kilkis_Wheat_2024.tif",
+    "commune": "Kilkis",
+    "croptype": "Wheat",
+    "year": "2024",
+    "area_ha": "16336.95",
+    "area_stremma": "163369.5"
+  },
+  {
+    "filename": "Oropediou Lasithiou_Potato_2022.tif",
+    "commune": "Oropediou Lasithiou",
+    "croptype": "Potato",
+    "year": "2022",
+    "area_ha": "562.14",
+    "area_stremma": "5621.4"
+  },
+  {
+    "filename": "Oropediou Lasithiou_Potato_2023.tif",
+    "commune": "Oropediou Lasithiou",
+    "croptype": "Potato",
+    "year": "2023",
+    "area_ha": "494.44",
+    "area_stremma": "4944.4"
+  },
+  {
+    "filename": "Oropediou Lasithiou_Potato_2024.tif",
+    "commune": "Oropediou Lasithiou",
+    "croptype": "Potato",
+    "year": "2024",
+    "area_ha": "451.19",
+    "area_stremma": "4511.9"
+  },
+  {
+    "filename": "Oropediou Lasithiou_Potato_2025.tif",
+    "commune": "Oropediou Lasithiou",
+    "croptype": "Potato",
+    "year": "2025",
+    "area_ha": "343.32",
+    "area_stremma": "3433.2"
+  },
+  {
+    "filename": "Servion - Velventou_Peach_2022.tif",
+    "commune": "Servion - Velventou",
+    "croptype": "Peach",
+    "year": "2022",
+    "area_ha": "282.73",
+    "area_stremma": "2827.3"
+  },
+  {
+    "filename": "Servion - Velventou_Peach_2023.tif",
+    "commune": "Servion - Velventou",
+    "croptype": "Peach",
+    "year": "2023",
+    "area_ha": "282.73",
+    "area_stremma": "2827.3"
+  },
+  {
+    "filename": "Servion - Velventou_Peach_2024.tif",
+    "commune": "Servion - Velventou",
+    "croptype": "Peach",
+    "year": "2024",
+    "area_ha": "282.73",
+    "area_stremma": "2827.3"
+  },
+  {
+    "filename": "Sofadon_Tomato_2022.tif",
+    "commune": "Sofadon",
+    "croptype": "Tomato",
+    "year": "2022",
+    "area_ha": "2929.7",
+    "area_stremma": "29297"
+  },
+  {
+    "filename": "Sofadon_Tomato_2023.tif",
+    "commune": "Sofadon",
+    "croptype": "Tomato",
+    "year": "2023",
+    "area_ha": "3700.7",
+    "area_stremma": "37007"
+  },
+  {
+    "filename": "Sofadon_Tomato_2024.tif",
+    "commune": "Sofadon",
+    "croptype": "Tomato",
+    "year": "2024",
+    "area_ha": "2202.5",
+    "area_stremma": "22025"
+  }
+]

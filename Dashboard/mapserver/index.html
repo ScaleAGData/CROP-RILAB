@@ -1,0 +1,218 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>MapServer WMS Viewer</title>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    
+    <!-- Leaflet CSS -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    
+    <style>
+        #map {
+            height: 600px;
+            width: 100%;
+        }
+        .controls {
+            padding: 10px;
+            background: white;
+            box-shadow: 0 0 10px rgba(0,0,0,0.1);
+            margin-bottom: 10px;
+        }
+        .debug {
+            background: #f0f0f0;
+            padding: 10px;
+            margin: 10px 0;
+            font-family: monospace;
+            font-size: 12px;
+        }
+        .config-note {
+            background: #e8f4fd;
+            border: none;
+            padding: 10px;
+            margin: 10px 0;
+            border-radius: 4px;
+            font-size: 14px;
+        }
+    </style>
+</head>
+<body>
+    <div class="config-note">
+        <strong>Configuration:</strong> To add your TIFF files, edit the <code>tiffFiles</code> object in the JavaScript section below. 
+        Add your TIFF filename and its bounds coordinates.
+    </div>
+    
+    <div class="controls">
+        <label>Select TIFF file:</label>
+        <select id="tiffSelect" style="padding: 5px; margin: 5px;" onchange="onTiffSelectionChange()">
+            <!-- Options will be populated by JavaScript -->
+        </select>
+        <button onclick="fitToBounds()" style="margin-left: 10px; padding: 5px;">Fit to Layer</button>
+        <button onclick="testWMS()" style="margin-left: 10px; padding: 5px;">Test WMS</button>
+    </div>
+    
+    <div class="debug" id="debug-info">Select a TIFF file to begin...</div>
+    
+    <div id="map"></div>
+
+    <!-- Leaflet JavaScript -->
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    
+    <script>
+        // ========================================
+        // CONFIGURATION - ADD YOUR TIFF FILES HERE
+        // ========================================
+        const tiffFiles = {
+            'TC7_ROI.tif': {
+                bounds: [[51.8039560, 4.9957110], [51.9354693, 5.4152242]],
+                bbox: "51.8039560,4.9957110,51.9354693,5.4152242"
+            },
+            'TC16_ROI.tif': {
+                bounds: [[51.7, 4.8], [52.1, 5.6]],
+                bbox: "51.7,4.8,52.1,5.6"
+            }
+            // Add more TIFF files like this:
+            // 'your_file.tif': {
+            //     bounds: [[south_lat, west_lon], [north_lat, east_lon]],
+            //     bbox: "south_lat,west_lon,north_lat,east_lon"
+            // }
+           
+        };
+        
+        // ========================================
+        // APPLICATION CODE - DON'T MODIFY BELOW
+        // ========================================
+        
+        // Initialize the map
+        var map = L.map('map').setView([51.8697127, 5.2054676], 12);
+
+        // Add OpenStreetMap as base layer
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            attribution: '© OpenStreetMap contributors'
+        }).addTo(map);
+
+        // Initialize WMS layer variable
+        var wmsLayer = null;
+        var currentTiff = null;
+
+        function updateDebug(message) {
+            document.getElementById('debug-info').innerHTML = message;
+        }
+
+        function populateDropdown() {
+            const select = document.getElementById('tiffSelect');
+            select.innerHTML = '<option value="">Select a TIFF file...</option>';
+            
+            Object.keys(tiffFiles).forEach(tiffName => {
+                const option = document.createElement('option');
+                option.value = tiffName;
+                option.textContent = tiffName;
+                select.appendChild(option);
+            });
+            
+            updateDebug(`Configured ${Object.keys(tiffFiles).length} TIFF files: ${Object.keys(tiffFiles).join(', ')}`);
+        }
+
+        function onTiffSelectionChange() {
+            const selectedTiff = document.getElementById('tiffSelect').value;
+            if (selectedTiff && tiffFiles[selectedTiff]) {
+                currentTiff = selectedTiff;
+                updateWMSLayer(selectedTiff);
+                fitToBounds();
+            }
+        }
+
+        function fitToBounds() {
+            if (currentTiff && tiffFiles[currentTiff]) {
+                const bounds = tiffFiles[currentTiff].bounds;
+                map.fitBounds(bounds);
+                updateDebug(`Fitting to bounds for ${currentTiff}: ${JSON.stringify(bounds)}`);
+            }
+        }
+
+        function testWMS() {
+            if (!currentTiff) {
+                updateDebug('No TIFF file selected for testing');
+                return;
+            }
+            
+            const testUrl = `http://localhost:8080/cgi-bin/mapserv?SERVICE=WMS&REQUEST=GetCapabilities&map=/data/mapfile.map&tiff_name=${currentTiff}`;
+            
+            updateDebug(`Testing WMS GetCapabilities for ${currentTiff}...`);
+            
+            fetch(testUrl)
+                .then(response => response.text())
+                .then(data => {
+                    if (data.includes('WMS_Capabilities') || data.includes('tiff_layer')) {
+                        updateDebug(`✓ WMS is working for ${currentTiff}! GetCapabilities successful.`);
+                        testGetMap();
+                    } else {
+                        updateDebug(`✗ WMS GetCapabilities failed for ${currentTiff}: ${data.substring(0, 200)}`);
+                    }
+                })
+                .catch(error => {
+                    updateDebug(`✗ WMS test failed for ${currentTiff}: ${error.message}`);
+                });
+        }
+        
+        function testGetMap() {
+            if (!currentTiff || !tiffFiles[currentTiff]) return;
+            
+            const bbox = tiffFiles[currentTiff].bbox;
+            const testUrl = `http://localhost:8080/cgi-bin/mapserv?SERVICE=WMS&REQUEST=GetMap&VERSION=1.3.0&LAYERS=tiff_layer&CRS=EPSG:4326&BBOX=${bbox}&WIDTH=512&HEIGHT=512&FORMAT=image/png&TRANSPARENT=true&map=/data/mapfile.map&tiff_name=${currentTiff}`;
+            
+            updateDebug(`Testing GetMap for ${currentTiff} with BBOX: ${bbox}<br>URL: ${testUrl}`);
+            
+            const img = new Image();
+            img.onload = function() {
+                updateDebug(`✓ GetMap working for ${currentTiff}! Image loaded successfully.<br>BBOX: ${bbox}<br>URL: ${testUrl}`);
+            };
+            img.onerror = function() {
+                updateDebug(`✗ GetMap failed for ${currentTiff} - image could not load.<br>BBOX: ${bbox}<br>URL: ${testUrl}`);
+            };
+            img.src = testUrl;
+        }
+
+        function updateWMSLayer(tiffName) {
+            if (!tiffFiles[tiffName]) {
+                updateDebug(`Error: No configuration found for ${tiffName}`);
+                return;
+            }
+            
+            updateDebug(`Loading WMS layer for: ${tiffName}`);
+            
+            // Remove existing WMS layer if it exists
+            if (wmsLayer) {
+                map.removeLayer(wmsLayer);
+            }
+
+            // Create new WMS layer
+            const wmsUrl = 'http://localhost:8080/cgi-bin/mapserv?map=/data/mapfile.map';
+            const wmsOptions = {
+                layers: 'tiff_layer',
+                format: 'image/png',
+                transparent: true,
+                version: '1.3.0',
+                tiff_name: tiffName
+            };
+
+            wmsLayer = L.tileLayer.wms(wmsUrl, wmsOptions);
+            wmsLayer.addTo(map);
+            
+            updateDebug(`✓ WMS layer loaded for ${tiffName} with bounds: ${JSON.stringify(tiffFiles[tiffName].bounds)}`);
+        }
+
+        // Initialize the application
+        window.onload = function() {
+            populateDropdown();
+            
+            // Auto-select the first TIFF if available
+            const firstTiff = Object.keys(tiffFiles)[0];
+            if (firstTiff) {
+                document.getElementById('tiffSelect').value = firstTiff;
+                onTiffSelectionChange();
+            }
+        };
+    </script>
+</body>
+</html>

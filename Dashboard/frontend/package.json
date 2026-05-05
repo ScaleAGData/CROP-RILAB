@@ -1,0 +1,66 @@
+{
+    "name": "scale-ag-data",
+    "homepage": ".",
+    "version": "0.1.0",
+    "private": true,
+    "dependencies": {
+        "@emotion/react": "^11.13.5",
+        "@emotion/styled": "latest",
+        "@mui/icons-material": "^6.1.8",
+        "@mui/lab": "^6.0.0-beta.18",
+        "@mui/material": "^6.1.8",
+        "@mui/styled-engine": "latest",
+        "@mui/x-charts": "latest",
+        "@mui/x-data-grid": "latest",
+        "@mui/x-data-grid-pro": "latest",
+        "@mui/x-date-pickers": "latest",
+        "@mui/x-date-pickers-pro": "latest",
+        "@mui/x-tree-view": "latest",
+        "@testing-library/jest-dom": "^5.17.0",
+        "@testing-library/react": "^13.4.0",
+        "@testing-library/user-event": "^13.5.0",
+        "@turf/turf": "^7.1.0",
+        "axios": "^1.7.9",
+        "dayjs": "latest",
+        "dotenv": "^16.4.7",
+        "geotiff": "^2.1.4-beta.1",
+        "highcharts": "^12.0.2",
+        "highcharts-react": "^0.0.3",
+        "highcharts-react-official": "^3.2.1",
+        "leaflet": "^1.9.4",
+        "lucide-react": "^0.462.0",
+        "papaparse": "^5.5.3",
+        "react": "^18.3.1",
+        "react-dom": "^18.3.1",
+        "react-leaflet": "^4.2.1",
+        "react-router-dom": "^7.1.0",
+        "react-scripts": "5.0.1",
+        "web-vitals": "^2.1.4",
+        "wellknown": "^0.5.0",
+        "xlsx": "^0.18.5"
+    },
+    "scripts": {
+        "start": "react-scripts start",
+        "build": "react-scripts build",
+        "test": "react-scripts test",
+        "eject": "react-scripts eject"
+    },
+    "eslintConfig": {
+        "extends": [
+            "react-app",
+            "react-app/jest"
+        ]
+    },
+    "browserslist": {
+        "production": [
+            ">0.2%",
+            "not dead",
+            "not op_mini all"
+        ],
+        "development": [
+            "last 1 chrome version",
+            "last 1 firefox version",
+            "last 1 safari version"
+        ]
+    }
+}

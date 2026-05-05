@@ -1,0 +1,247 @@
+MAP
+  NAME "raster_wms_wcs"
+  STATUS ON
+  SIZE 800 600
+  UNITS DD
+  IMAGECOLOR 255 255 255
+  
+  OUTPUTFORMAT
+    NAME "png"
+    DRIVER "AGG/PNG"
+    MIMETYPE "image/png"
+    IMAGEMODE RGBA
+    EXTENSION "png"
+    FORMATOPTION "GAMMA=0.75"
+  END
+  
+  OUTPUTFORMAT
+    NAME "GEOTIFF"
+    DRIVER GDAL/GTiff
+    MIMETYPE "image/tiff"
+    IMAGEMODE RGB
+    EXTENSION "tif"
+  END
+  
+  PROJECTION
+    "init=epsg:4326"
+  END
+  
+  WEB
+    IMAGEPATH "/tmp/ms_tmp/"
+    IMAGEURL "/ms_tmp/"
+    METADATA
+      # WMS Metadata
+      "wms_title"           "Raster WMS Server"
+      "wms_onlineresource"  "http://localhost:8080/cgi-bin/mapserv?map=/data/mapfile.map&"
+      "wms_srs"             "EPSG:4326 EPSG:3857"
+      "wms_enable_request"  "*"
+      
+      # WCS Metadata - ADD THESE LINES
+      "wcs_label"           "Raster WCS Server"
+      "wcs_onlineresource"  "http://localhost:8080/cgi-bin/mapserv?map=/data/mapfile.map&"
+      "wcs_srs"             "EPSG:4326 EPSG:3857"
+      "wcs_enable_request"  "*"
+      "wcs_formats"         "GEOTIFF"
+      
+      # OWS (common) Metadata
+      "ows_enable_request"  "*"
+      "ows_title"           "Raster WMS/WCS Server"
+      "ows_abstract"        "WMS and WCS service for raster TIFF layers"
+      "ows_fees"            "none"
+      "ows_accessconstraints" "none"
+    END
+  END
+  
+  CONFIG "MS_ERRORFILE" "/tmp/ms_tmp/mapserver.log"
+  DEBUG 5
+
+
+  # -------------------------
+  # 2022 Layer - Green
+  # -------------------------
+  LAYER
+    NAME "tiff_layer_2022"
+    TYPE RASTER
+    STATUS ON
+    VALIDATION
+      "TIFF_NAME" "^[A-Za-z0-9_-]+\\.tif$"
+    END
+    DATA "/data/tifs/%TIFF_NAME%"
+    PROCESSING "BANDS=1"
+    PROCESSING "NODATA=255"
+    PROCESSING "LOAD_WHOLE_IMAGE=NO"
+    
+    PROJECTION
+      "init=epsg:4326"
+    END
+    
+    METADATA
+      # WCS Metadata - ADD THESE LINES TO EACH LAYER
+      "wcs_enable_request"  "*"
+      "wcs_label"           "TIFF Layer 2022"
+      "wcs_rangeset_name"   "Range 1"
+      "wcs_rangeset_label"  "TIFF 2022 Range"
+      "wcs_formats"         "GEOTIFF"
+      "wcs_native_format"   "image/tiff"
+      "wcs_nativeformat"    "GTiff"
+    END
+    
+    CLASS
+      EXPRESSION ([pixel] = 255)
+      STYLE
+        COLOR 0 0 0
+        OPACITY 0
+      END
+    END
+    
+    CLASS
+      EXPRESSION ([pixel] > 0 AND [pixel] < 255)
+      STYLE
+        COLOR 0 255 100  # Green
+        OPACITY 80
+      END
+    END
+  END
+
+
+  # -------------------------
+  # 2023 Layer - Blue
+  # -------------------------
+  LAYER
+    NAME "tiff_layer_2023"
+    TYPE RASTER
+    STATUS ON
+    VALIDATION
+      "TIFF_NAME" "^[A-Za-z0-9_-]+\\.tif$"
+    END
+    DATA "/data/tifs/%TIFF_NAME%"
+    PROCESSING "BANDS=1"
+    PROCESSING "NODATA=255"
+    PROCESSING "LOAD_WHOLE_IMAGE=NO"
+    
+    PROJECTION
+      "init=epsg:4326"
+    END
+    
+    METADATA
+      "wcs_enable_request"  "*"
+      "wcs_label"           "TIFF Layer 2023"
+      "wcs_rangeset_name"   "Range 1"
+      "wcs_rangeset_label"  "TIFF 2023 Range"
+      "wcs_formats"         "GEOTIFF"
+      "wcs_native_format"   "image/tiff"
+      "wcs_nativeformat"    "GTiff"
+    END
+
+    CLASS
+      EXPRESSION ([pixel] = 255)
+      STYLE
+        COLOR 0 0 0
+        OPACITY 0
+      END
+    END
+    
+    CLASS
+      EXPRESSION ([pixel] > 0 AND [pixel] < 255)
+      STYLE
+        COLOR 0 100 255  # Blue
+        OPACITY 80
+      END
+    END
+  END
+
+
+  # -------------------------
+  # 2024 Layer - Orange
+  # -------------------------
+  LAYER
+    NAME "tiff_layer_2024"
+    TYPE RASTER
+    STATUS ON
+    VALIDATION
+      "TIFF_NAME" "^[A-Za-z0-9_-]+\\.tif$"
+    END
+    DATA "/data/tifs/%TIFF_NAME%"
+    PROCESSING "BANDS=1"
+    PROCESSING "NODATA=255"
+    PROCESSING "LOAD_WHOLE_IMAGE=NO"
+    
+    PROJECTION
+      "init=epsg:4326"
+    END
+    
+    METADATA
+      "wcs_enable_request"  "*"
+      "wcs_label"           "TIFF Layer 2024"
+      "wcs_rangeset_name"   "Range 1"
+      "wcs_rangeset_label"  "TIFF 2024 Range"
+      "wcs_formats"         "GEOTIFF"
+      "wcs_native_format"   "image/tiff"
+      "wcs_nativeformat"    "GTiff"
+    END
+    
+    CLASS
+      EXPRESSION ([pixel] = 255)
+      STYLE
+        COLOR 0 0 0
+        OPACITY 0
+      END
+    END
+    
+    CLASS
+      EXPRESSION ([pixel] > 0 AND [pixel] < 255)
+      STYLE
+        COLOR 255 165 0  # Orange
+        OPACITY 80
+      END
+    END
+  END
+
+
+  # -------------------------
+  # 2025 Layer - Purple
+  # -------------------------
+  LAYER
+    NAME "tiff_layer_2025"
+    TYPE RASTER
+    STATUS ON
+    VALIDATION
+      "TIFF_NAME" "^[A-Za-z0-9_-]+\\.tif$"
+    END
+    DATA "/data/tifs/%TIFF_NAME%"
+    PROCESSING "BANDS=1"
+    PROCESSING "NODATA=255"
+    PROCESSING "LOAD_WHOLE_IMAGE=NO"
+    
+    PROJECTION
+      "init=epsg:4326"
+    END
+    
+    METADATA
+      "wcs_enable_request"  "*"
+      "wcs_label"           "TIFF Layer 2025"
+      "wcs_rangeset_name"   "Range 1"
+      "wcs_rangeset_label"  "TIFF 2025 Range"
+      "wcs_formats"         "GEOTIFF"
+      "wcs_native_format"   "image/tiff"
+      "wcs_nativeformat"    "GTiff"
+    END
+    
+    CLASS
+      EXPRESSION ([pixel] = 255)
+      STYLE
+        COLOR 0 0 0
+        OPACITY 0
+      END
+    END
+    
+    CLASS
+      EXPRESSION ([pixel] > 0 AND [pixel] < 255)
+      STYLE
+        COLOR 180 0 255  # Purple
+        OPACITY 80
+      END
+    END
+  END
+
+END

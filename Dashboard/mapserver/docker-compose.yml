@@ -1,0 +1,18 @@
+services:
+  mapserver:
+    build:
+      context: .
+      dockerfile: ./environments/development/Dockerfile
+    ports:
+      - "8080:8080"
+    volumes:
+      # Mount shared TIFF files read-only
+      - ./shared/tifs:/data/tifs:ro
+      # Mount shared mapfiles read-only (editable without rebuilding)
+      - ./shared/mapfile.map:/data/mapfile.map:ro
+      # Mount development logs (read-write)
+      - ./logs/development:/tmp:rw
+    environment:
+      - MS_MAPFILE=/data/mapfile.map
+      - MS_MODE=browse
+    restart: unless-stopped
