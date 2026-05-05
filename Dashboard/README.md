@@ -189,6 +189,3 @@ scaleagdataui/
 - The root `docker-compose.yml` currently exposes the frontend on host port `3002` and MapServer on host port `8080`.
 - The frontend code still contains some legacy references to the old `scale-ag-data` app name in package metadata and UI copy, even though the folder is now named `frontend`.
 - Some frontend functionality expects external API connectivity and prepared dataset files to be available.
-
-ScaleAgData Project
-This work has been initiated as part of the ScaleAgData-he project. The project receives funding from the European Union's HORIZON Innovation Actions under grant agreement No. 101086355. Views and opinions expressed are however those of the author(s) only and do not necessarily reflect those of the European Union or Research Executive Agency. Neither the European Union nor the granting authority can be held responsible for them.
