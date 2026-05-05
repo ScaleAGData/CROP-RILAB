@@ -28,5 +28,5 @@ CROP-RILAB/
 - The dashboard module is in `Dashboard/`.
 - The crop classification folder is currently named `CropClassisification/` in the repository.
 
-ScaleAgData Project
+## ScaleAgData Project
 This work has been initiated as part of the ScaleAgData-he project. The project receives funding from the European Union's HORIZON Innovation Actions under grant agreement No. 101086355. Views and opinions expressed are however those of the author(s) only and do not necessarily reflect those of the European Union or Research Executive Agency. Neither the European Union nor the granting authority can be held responsible for them.
