@@ -14,10 +14,16 @@ import LogoutRoundedIcon from '@mui/icons-material/LogoutRounded';
 import SettingsRoundedIcon from '@mui/icons-material/SettingsRounded';
 import InfoRoundedIcon from '@mui/icons-material/InfoRounded';
 import HelpRoundedIcon from '@mui/icons-material/HelpRounded';
+import MenuBookRoundedIcon from '@mui/icons-material/MenuBookRounded';
 import AdministrativeLevelsSelector from './AnalysisLevel';
+import UserManualDialog from '../common/UserManualDialog';
 
 function SideMenuMobile({ open, toggleDrawer }) {
+  const [manualOpen, setManualOpen] = React.useState(false);
+
   return (
+    <>
+    <UserManualDialog open={manualOpen} onClose={() => setManualOpen(false)} />
     <Drawer
       anchor="right"
       open={open}
@@ -52,6 +58,17 @@ function SideMenuMobile({ open, toggleDrawer }) {
           <Stack sx={{ flexGrow: 1, p: 2 }}>
             <List dense>
               <ListItem disablePadding>
+                <ListItemButton
+                  onClick={() => {
+                    toggleDrawer(false)();
+                    setManualOpen(true);
+                  }}
+                >
+                  <ListItemIcon><MenuBookRoundedIcon /></ListItemIcon>
+                  <ListItemText primary="User Manual" />
+                </ListItemButton>
+              </ListItem>
+              <ListItem disablePadding>
                 <ListItemButton>
                   <ListItemIcon><SettingsRoundedIcon /></ListItemIcon>
                   <ListItemText primary="Settings" />
@@ -79,6 +96,7 @@ function SideMenuMobile({ open, toggleDrawer }) {
           </Stack>
       </Stack>
     </Drawer>
+    </>
   );
 }
 

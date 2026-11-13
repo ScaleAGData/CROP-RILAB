@@ -1,0 +1,11 @@
+node_modules/
+build/
+coverage/
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+npm-debug.log*
+dockerfile
+docker-compose.yml
+*.md

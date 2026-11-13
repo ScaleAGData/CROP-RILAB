@@ -19,6 +19,22 @@ export const getBaselineMultiplier = (region, cropType, year) => {
 };
 
 /**
+ * Get total classified crop area (hectares) for a region/crop/year
+ */
+export const getCropClassificationArea = (region, cropType, year) => {
+  if (!region || !cropType || !year || year === "all") return null;
+
+  const cropArea = crop_areas.find(
+    area =>
+      area.commune === region &&
+      area.croptype === cropType &&
+      area.year === year
+  );
+
+  return cropArea ? parseFloat(cropArea.area_ha) : null;
+};
+
+/**
  * Get available years from parcel data
  */
 export const getAvailableYears = (selectedRegion, selectedCropType, parcelData) => {
@@ -58,18 +74,27 @@ export const processYearLevelData = (
   const eventData = combined_data["events_data"][yearDataKey] || [];
   const agronomyKey = `${region}_${cropType}_${level}_${year}`;
   const agronomyData = combined_data["agronomy_data"]?.[agronomyKey] || [];
-  
+
+  // events_data only lists parcels that actually recorded an event that year,
+  // while agronomy_data lists every parcel in the group - so the two arrays
+  // can have different lengths/orders and must be matched by parcelId, not
+  // by array position.
+  const areaByParcelId = new Map(
+    agronomyData.map(entry => [entry.parcelId, entry.computed_stremmata || 0])
+  );
+
   const parcels = eventData
-    .map((parcelRecords, index) => {
+    .map((parcelRecords) => {
       if (!parcelRecords || parcelRecords.length === 0) return null;
-      
+
+      const parcelArea = areaByParcelId.get(parcelRecords[0]?.parcelId) || 0;
+
+      // The parcel area is passed so extractors can turn per-stremma values
+      // into absolute quantities (e.g. m3/stremma x stremmata = m3)
       const totalValue = parcelRecords.reduce((total, record) => {
-        return total + valueExtractor(record);
+        return total + valueExtractor(record, parcelArea);
       }, 0);
-      
-      const parcelAgronomy = agronomyData[index];
-      const parcelArea = parcelAgronomy?.computed_stremmata || 0;
-      
+
       return { totalValue, records: parcelRecords, area: parcelArea };
     })
     .filter(Boolean);
@@ -83,7 +108,18 @@ export const processYearLevelData = (
     averageValue,
     parcelCount: parcels.length,
     totalParcelArea,
-    records: parcels.flatMap(p => p.records)
+    records: parcels.flatMap(p => p.records),
+    // Per-parcel breakdown so the level totals can be validated parcel by parcel
+    parcels: parcels.map(p => ({
+      parcelId: p.records[0]?.parcelId,
+      area: p.area,
+      eventCount: p.records.length,
+      totalValue: p.totalValue,
+      // Each record with the value it contributed to totalValue
+      records: p.records
+        .map(record => ({ record, value: valueExtractor(record, p.area) }))
+        .sort((a, b) => String(a.record.date).localeCompare(String(b.record.date)))
+    }))
   };
 };
 
@@ -110,19 +146,42 @@ export const processAllYearsData = (
 };
 
 /**
+ * Denominator to normalize a Pilot/Adjacent level's totalValue by.
+ * "perArea": divide by real parcel area (computed_stremmata) - use when the extractor
+ *   returns absolute totals (e.g. harvest kg, irrigation m3 = m3/stremma x area), giving
+ *   an area-weighted rate.
+ * "perParcel": divide by parcel count - a plain per-parcel mean of per-stremma values.
+ */
+export const getLevelDenominator = (levelData, normalizationMode = "perArea") => {
+  if (!levelData) return 0;
+  return normalizationMode === "perParcel" ? levelData.parcelCount : levelData.totalParcelArea;
+};
+
+/**
+ * Value to plot/display for a Pilot/Adjacent level, normalized per getLevelDenominator
+ */
+export const getLevelValue = (levelData, normalizationMode = "perArea") => {
+  if (!levelData) return 0;
+  const denominator = getLevelDenominator(levelData, normalizationMode);
+  return denominator > 0 ? levelData.totalValue / denominator : 0;
+};
+
+/**
  * Calculate average baseline across all years
  */
-export const calculateAverageBaseline = (availableYears, allYearsData) => {
+export const calculateAverageBaseline = (availableYears, allYearsData, normalizationMode = "perArea") => {
   let totalValue = 0;
-  let totalParcelArea = 0;
+  let totalDenominator = 0;
 
   availableYears.forEach(year => {
     const yearData = allYearsData[year];
     totalValue += (yearData.Pilot?.totalValue || 0) + (yearData.Adjacent?.totalValue || 0);
-    totalParcelArea += (yearData.Pilot?.totalParcelArea || 0) + (yearData.Adjacent?.totalParcelArea || 0);
+    totalDenominator +=
+      getLevelDenominator(yearData.Pilot, normalizationMode) +
+      getLevelDenominator(yearData.Adjacent, normalizationMode);
   });
 
-  return totalParcelArea > 0 ? totalValue / totalParcelArea : 0;
+  return totalDenominator > 0 ? totalValue / totalDenominator : 0;
 };
 
 /**
@@ -132,19 +191,22 @@ export const calculateYearlyBaselines = (
   availableYears,
   allYearsData,
   region,
-  cropType
+  cropType,
+  normalizationMode = "perArea"
 ) => {
   const baselines = {};
-  
+
   availableYears.forEach(year => {
     const yearData = allYearsData[year];
     const totalValue = (yearData.Pilot?.totalValue || 0) + (yearData.Adjacent?.totalValue || 0);
-    const totalParcelArea = (yearData.Pilot?.totalParcelArea || 0) + (yearData.Adjacent?.totalParcelArea || 0);
+    const totalDenominator =
+      getLevelDenominator(yearData.Pilot, normalizationMode) +
+      getLevelDenominator(yearData.Adjacent, normalizationMode);
     const multiplier = getBaselineMultiplier(region, cropType, year);
-    
-    baselines[year] = totalParcelArea > 0 ? (totalValue * multiplier) / totalParcelArea : 0;
+
+    baselines[year] = totalDenominator > 0 ? (totalValue * multiplier) / totalDenominator : 0;
   });
-  
+
   return baselines;
 };
 

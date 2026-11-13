@@ -36,7 +36,6 @@ const TifLayer = ({ layerName }) => {
           : "tiff_layer_2024";
 
   const params = {
-    map: "/data/mapfile.map",
     layers: layerType,
     format: "image/png",
     transparent: true,
@@ -55,11 +54,72 @@ const TifLayer = ({ layerName }) => {
   );
 };
 
+// DHI soil moisture TIFFs in mapserver/shared/tifs (served by "dhi_sm_layer").
+// Shown on the map when their parcel is selected.
+const DHI_SM_TIFFS = [
+  { parcelId: 345638, file: "DHI_SM_345638_2024.tif", period: "2024-03-01 → 2024-08-31" },
+];
+
+// Must match the classes of "dhi_sm_layer" in mapserver/shared/mapfile.map
+const DHI_SM_LEGEND = [
+  { label: "< 20", color: "rgb(166, 97, 26)" },
+  { label: "20 – 23", color: "rgb(223, 194, 125)" },
+  { label: "23 – 26", color: "rgb(199, 234, 229)" },
+  { label: "26 – 29", color: "rgb(90, 180, 172)" },
+  { label: "≥ 29", color: "rgb(1, 102, 94)" },
+];
+
+// Legend in the bottom left corner while the DHI layer is on the map
+const DhiSmLegend = ({ period }) => {
+  const map = useMap();
+
+  useEffect(() => {
+    const legend = L.control({ position: "bottomleft" });
+    legend.onAdd = () => {
+      const div = L.DomUtil.create("div");
+      div.style.cssText =
+        "background: rgba(255,255,255,0.9); padding: 6px 8px; border-radius: 4px; font-size: 12px; line-height: 18px; color: #222;";
+      div.innerHTML =
+        `<b>DHI soil moisture (%)</b><br/><span style="color:#666">${period} average</span><br/>` +
+        DHI_SM_LEGEND.map(
+          ({ label, color }) =>
+            `<i style="display:inline-block;width:14px;height:12px;margin-right:6px;vertical-align:middle;background:${color}"></i>${label}`
+        ).join("<br/>");
+      return div;
+    };
+    legend.addTo(map);
+    return () => legend.remove();
+  }, [map, period]);
+
+  return null;
+};
+
+const DhiSmLayer = ({ tiff }) => {
+  const [visible, setVisible] = useState(false);
+
+  return (
+    <>
+      <WMSTileLayer
+        url={MAP_SERVER_URL}
+        params={{
+          layers: "dhi_sm_layer",
+          format: "image/png",
+          transparent: true,
+          version: "1.3.0",
+          TIFF_NAME: tiff.file,
+          styles: "",
+        }}
+        opacity={0.85}
+        eventHandlers={{ add: () => setVisible(true), remove: () => setVisible(false) }}
+      />
+      {visible && <DhiSmLegend period={tiff.period} />}
+    </>
+  );
+};
+
 const MapFocusHandler = ({ selectedField, selectedRegion }) => {
   const map = useMap();
   const { selectedCropType, selectedLevel, selectedYear } = useSelection();
-  const defaultCenter = [39.18, 24.29];
-  const defaultZoom = 6.2;
   const previousSelectionRef = useRef({});
   const currentPopupRef = useRef(null);
 
@@ -135,7 +195,7 @@ const MapFocusHandler = ({ selectedField, selectedRegion }) => {
         });
       }
     }
-  }, [selectedRegion, map, defaultCenter, defaultZoom]);
+  }, [selectedRegion, map]);
 
   useEffect(() => {
     if (currentPopupRef.current) {
@@ -308,6 +368,11 @@ export default function ParcelMap() {
     return tifLayers;
   }, [selectedRegion, selectedCropType]);
 
+  const dhiSmTiffs = useMemo(
+    () => (selectedField ? DHI_SM_TIFFS.filter((tiff) => tiff.parcelId === selectedField.parcel_id) : []),
+    [selectedField]
+  );
+
   const geoJsonData = useMemo(() => {
     const payload = combined_data["filtered_data"][dataKey] || [];
     
@@ -462,10 +527,16 @@ export default function ParcelMap() {
           {availableTifLayers.length > 0 && availableTifLayers.map((tifLayer) => (
             <LayersControl.Overlay 
               key={tifLayer.name}
-              name={`Pilot ${tifLayer.displayName}`}
+              name={`Crop classification ${tifLayer.displayName}`}
               checked
             >
               <TifLayer layerName={tifLayer.name} />
+            </LayersControl.Overlay>
+          ))}
+
+          {dhiSmTiffs.map((tiff) => (
+            <LayersControl.Overlay key={tiff.file} name={`DHI Soil Moisture ${tiff.period}`} checked>
+              <DhiSmLayer tiff={tiff} />
             </LayersControl.Overlay>
           ))}
 

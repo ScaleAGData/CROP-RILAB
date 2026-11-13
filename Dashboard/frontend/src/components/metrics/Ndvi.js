@@ -309,7 +309,7 @@ const NDVIChartComponent = () => {
         title: {
           text: `${selectedIndicator.toUpperCase()} Mean Values`,
         },
-        ...(selectedIndicator === 'ndwi' ? {
+        ...(selectedIndicator === 'ndwi' || selectedIndicator === 'ndmi' ? {
           min: -1,
           max: 1
         } : selectedIndicator === 'psri' ? {
@@ -391,6 +391,7 @@ const NDVIChartComponent = () => {
             <Tab label="PSRI" value="psri" />
             <Tab label="SAVI" value="savi" />
             <Tab label="NDWI" value="ndwi" />
+            <Tab label="NDMI" value="ndmi" />
           </Tabs>
         </Box>
         {Object.keys(chartOptions).length > 0 ? (

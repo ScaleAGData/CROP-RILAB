@@ -1,0 +1,6 @@
+environments/
+logs/
+*.md
+docker-compose.yml
+index.html
+.dockerignore

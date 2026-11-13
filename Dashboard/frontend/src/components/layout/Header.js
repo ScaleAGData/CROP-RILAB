@@ -6,8 +6,14 @@ import ColorModeIconDropdown from '../../theme/ColorModeIconDropdown';
 
 import Search from '../navigation/Search';
 import AdministrativeLevelsSelector from '../navigation/AnalysisLevel';
+import IconButton from '@mui/material/IconButton';
+import Tooltip from '@mui/material/Tooltip';
+import MenuBookRoundedIcon from '@mui/icons-material/MenuBookRounded';
+import UserManualDialog from '../common/UserManualDialog';
 
 export default function Header() {
+  const [manualOpen, setManualOpen] = React.useState(false);
+
   return (
     <Stack
       direction="row"
@@ -46,8 +52,19 @@ export default function Header() {
       >
         <Search />
         <CustomDatePicker />
+        <Tooltip title="User Manual">
+          <IconButton
+            size="small"
+            disableRipple
+            aria-label="Open user manual"
+            onClick={() => setManualOpen(true)}
+          >
+            <MenuBookRoundedIcon />
+          </IconButton>
+        </Tooltip>
         <ColorModeIconDropdown />
       </Stack>
+      <UserManualDialog open={manualOpen} onClose={() => setManualOpen(false)} />
     </Stack>
   );
 }

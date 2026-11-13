@@ -52,8 +52,14 @@ setenv.add-response-header = (
     "Access-Control-Allow-Headers" => "Origin, X-Requested-With, Content-Type, Accept"
 )
 
+# lighttpd does not pass the container environment to CGI, so the mapfile
+# has to be set here (otherwise every request needs ?map=...)
+setenv.add-environment = (
+    "MS_MAPFILE" => "/data/mapfile.map"
+)
+
 # CGI configuration
-cgi.assign = ( 
+cgi.assign = (
     "" => "/var/www/html/cgi-bin/mapserv"
 )
 

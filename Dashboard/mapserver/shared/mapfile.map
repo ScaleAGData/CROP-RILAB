@@ -32,13 +32,11 @@ MAP
     METADATA
       # WMS Metadata
       "wms_title"           "Raster WMS Server"
-      "wms_onlineresource"  "http://localhost:8080/cgi-bin/mapserv?map=/data/mapfile.map&"
       "wms_srs"             "EPSG:4326 EPSG:3857"
       "wms_enable_request"  "*"
-      
-      # WCS Metadata - ADD THESE LINES
+
+      # WCS Metadata
       "wcs_label"           "Raster WCS Server"
-      "wcs_onlineresource"  "http://localhost:8080/cgi-bin/mapserv?map=/data/mapfile.map&"
       "wcs_srs"             "EPSG:4326 EPSG:3857"
       "wcs_enable_request"  "*"
       "wcs_formats"         "GEOTIFF"
@@ -52,8 +50,6 @@ MAP
     END
   END
   
-  CONFIG "MS_ERRORFILE" "/tmp/ms_tmp/mapserver.log"
-  DEBUG 5
 
 
   # -------------------------
@@ -240,6 +236,79 @@ MAP
       STYLE
         COLOR 180 0 255  # Purple
         OPACITY 80
+      END
+    END
+  END
+
+
+  # -------------------------
+  # DHI soil moisture (%) - dry (brown) to wet (blue)
+  # Float32 band 1, nodata -9999 (e.g. DHI_SM_345638_2024.tif)
+  # Class limits must match DHI_SM_LEGEND in LeafletMap.js
+  # -------------------------
+  LAYER
+    NAME "dhi_sm_layer"
+    TYPE RASTER
+    STATUS ON
+    VALIDATION
+      "TIFF_NAME" "^DHI_SM_[A-Za-z0-9_-]+\\.tif$"
+    END
+    DATA "/data/tifs/%TIFF_NAME%"
+    PROCESSING "BANDS=1"
+    PROCESSING "NODATA=-9999"
+    PROCESSING "LOAD_WHOLE_IMAGE=NO"
+
+    PROJECTION
+      "init=epsg:4326"
+    END
+
+    METADATA
+      "wcs_enable_request"  "*"
+      "wcs_label"           "DHI Soil Moisture"
+      "wcs_rangeset_name"   "Range 1"
+      "wcs_rangeset_label"  "Soil moisture (%)"
+      "wcs_formats"         "GEOTIFF"
+      "wcs_native_format"   "image/tiff"
+      "wcs_nativeformat"    "GTiff"
+    END
+
+    CLASS
+      EXPRESSION ([pixel] < 20)
+      STYLE
+        COLOR 166 97 26  # Dry
+        OPACITY 85
+      END
+    END
+
+    CLASS
+      EXPRESSION ([pixel] >= 20 AND [pixel] < 23)
+      STYLE
+        COLOR 223 194 125
+        OPACITY 85
+      END
+    END
+
+    CLASS
+      EXPRESSION ([pixel] >= 23 AND [pixel] < 26)
+      STYLE
+        COLOR 199 234 229
+        OPACITY 85
+      END
+    END
+
+    CLASS
+      EXPRESSION ([pixel] >= 26 AND [pixel] < 29)
+      STYLE
+        COLOR 90 180 172
+        OPACITY 85
+      END
+    END
+
+    CLASS
+      EXPRESSION ([pixel] >= 29)
+      STYLE
+        COLOR 1 102 94  # Wet
+        OPACITY 85
       END
     END
   END

@@ -1,21 +1,8 @@
 // components/BaseDataComponent.jsx
 import React, { useMemo } from "react";
-import {
-  Box,
-  Paper,
-  Table,
-  TableBody,
-  TableCell,
-  TableContainer,
-  TableHead,
-  TableRow,
-  Tooltip,
-  IconButton
-} from "@mui/material";
+import { Box, Paper } from "@mui/material";
 import Highcharts from "highcharts";
 import HighchartsReact from "highcharts-react-official";
-import * as XLSX from "xlsx";
-import FileDownloadIcon from "@mui/icons-material/FileDownload";
 import { useSelection } from "../navigation/AnalysisLevel";
 import {
   getAvailableYears,
@@ -30,6 +17,7 @@ import {
   createAggregatedChartOptions,
   createYearlyBaselineChartOptions
 } from "../utils/chartConfig";
+import LevelParcelTable from "./LevelParcelTable";
 
 /**
  * Base component for data visualization (harvest/irrigation/etc)
@@ -42,9 +30,13 @@ const BaseDataComponent = ({
   yAxisLabel,
   baselineChartTitle,
   baselineYAxisLabel,
-  tableColumns,
-  getTableRowData,
-  exportFileName
+  exportFileName,
+  normalizationMode = "perArea",
+  totalLabel,
+  averageLabel,
+  eventCountLabel,
+  describeRecord,
+  largeUnit
 }) => {
   const { selectedRegion, selectedCropType, selectedYear, parcelData } = useSelection();
 
@@ -77,14 +69,16 @@ const BaseDataComponent = ({
   );
 
   // ===== BASELINE CALCULATION =====
+  // Uses yearsToDisplay (not availableYears) so a single-year selection shows
+  // that year's own rate instead of the rate pooled across all history.
   const averageBaseline = useMemo(
-    () => calculateAverageBaseline(availableYears, allYearsData),
-    [availableYears, allYearsData]
+    () => calculateAverageBaseline(yearsToDisplay, allYearsData, normalizationMode),
+    [yearsToDisplay, allYearsData, normalizationMode]
   );
 
   const yearlyBaselines = useMemo(
-    () => calculateYearlyBaselines(availableYears, allYearsData, selectedRegion, selectedCropType),
-    [availableYears, allYearsData, selectedRegion, selectedCropType]
+    () => calculateYearlyBaselines(availableYears, allYearsData, selectedRegion, selectedCropType, normalizationMode),
+    [availableYears, allYearsData, selectedRegion, selectedCropType, normalizationMode]
   );
 
   const yearlyAverageBaselines = useMemo(
@@ -101,9 +95,11 @@ const BaseDataComponent = ({
       averageBaseline,
       unit,
       title: chartTitle,
-      yAxisLabel
+      yAxisLabel,
+      normalizationMode,
+      largeUnit
     }),
-    [yearsToDisplay, displayData, selectedYear, averageBaseline, unit, chartTitle, yAxisLabel]
+    [yearsToDisplay, displayData, selectedYear, averageBaseline, unit, chartTitle, yAxisLabel, normalizationMode, largeUnit]
   );
 
   const yearlyBaselineChartOptions = useMemo(
@@ -117,29 +113,12 @@ const BaseDataComponent = ({
       region: selectedRegion,
       cropType: selectedCropType,
       title: baselineChartTitle,
-      yAxisLabel: baselineYAxisLabel
+      yAxisLabel: baselineYAxisLabel,
+      normalizationMode
     }),
-    [yearsToDisplay, displayData, selectedYear, yearlyBaselines, yearlyAverageBaselines, 
-     averageBaseline, selectedRegion, selectedCropType, baselineChartTitle, baselineYAxisLabel]
+    [yearsToDisplay, displayData, selectedYear, yearlyBaselines, yearlyAverageBaselines,
+     averageBaseline, selectedRegion, selectedCropType, baselineChartTitle, baselineYAxisLabel, normalizationMode]
   );
-
-  // ===== TABLE DATA =====
-  const tableRows = useMemo(
-    () => availableYears.flatMap(year => {
-      const yearData = displayData[year];
-      if (!yearData) return [];
-      return getTableRowData(year, yearData);
-    }),
-    [availableYears, displayData, getTableRowData]
-  );
-
-  // ===== EXCEL EXPORT =====
-  const exportToExcel = () => {
-    const ws = XLSX.utils.json_to_sheet(tableRows);
-    const wb = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(wb, ws, "Data");
-    XLSX.writeFile(wb, `${exportFileName}_${selectedRegion}_${selectedCropType}_${selectedYear}.xlsx`);
-  };
 
   // ===== RENDER =====
   return (
@@ -154,16 +133,16 @@ const BaseDataComponent = ({
       }}
     >
       {/* Chart 1: Aggregated Data */}
-      <Paper sx={{ p: 0.5, mb: 0.1 }}>
-        <HighchartsReact 
+      <Paper sx={{ p: 0.5, mb: 0.1, position: "relative" }}>
+        <HighchartsReact
           key={`chart-${yearsToDisplay.join('-')}`}
-          highcharts={Highcharts} 
-          options={chartOptions} 
+          highcharts={Highcharts}
+          options={chartOptions}
         />
       </Paper>
 
       {/* Chart 2: Yearly Baseline */}
-      {(selectedYear === "all" || !selectedYear) && (
+      {yearlyBaselineChartOptions && (
         <Paper sx={{ p: 0.5, mb: 2 }}>
           <HighchartsReact 
             key={`baseline-chart-${yearsToDisplay.join('-')}`}
@@ -174,83 +153,16 @@ const BaseDataComponent = ({
       )}
 
       {/* Table */}
-      <TableContainer component={Paper} sx={{ mb: 0.5, mx: "auto", borderRadius: 0 }}>
-        <Table
-          stickyHeader
-          sx={{
-            borderCollapse: "separate",
-            borderSpacing: 0,
-            "& th, & td": {
-              border: (theme) => `1px solid ${theme.palette.divider}`,
-            },
-            "& th": {
-              backgroundColor: (theme) =>
-                theme.palette.mode === "dark"
-                  ? theme.palette.grey[700]
-                  : theme.palette.grey[200],
-              color: (theme) =>
-                theme.palette.mode === "dark"
-                  ? theme.palette.common.white
-                  : theme.palette.common.black,
-              fontWeight: "500",
-              textTransform: "none",
-              letterSpacing: "0.5px",
-              padding: "12px",
-            },
-            "& tbody tr:hover": {
-              backgroundColor: (theme) =>
-                theme.palette.mode === "dark"
-                  ? theme.palette.grey[700]
-                  : theme.palette.grey[100],
-            },
-          }}
-          aria-label="data table"
-        >
-          <TableHead>
-            <TableRow>
-              {tableColumns.map((col, idx) => (
-                <TableCell key={idx}>
-                  {col}
-                  {idx === tableColumns.length - 1 && (
-                    <Tooltip title="Export to Excel">
-                      <IconButton
-                        size="small"
-                        onClick={exportToExcel}
-                        disabled={tableRows.length === 0}
-                        sx={{
-                          position: "absolute",
-                          right: 8,
-                          top: "50%",
-                          transform: "translateY(-50%)",
-                        }}
-                      >
-                        <FileDownloadIcon fontSize="small" />
-                      </IconButton>
-                    </Tooltip>
-                  )}
-                </TableCell>
-              ))}
-            </TableRow>
-          </TableHead>
-          <TableBody>
-            {tableRows.length > 0 ? (
-              tableRows.map((row, idx) => (
-                <TableRow key={idx}>
-                  {Object.values(row).map((value, cellIdx) => (
-                    <TableCell key={cellIdx}>{value}</TableCell>
-                  ))}
-                </TableRow>
-              ))
-            ) : (
-              <TableRow>
-                <TableCell colSpan={tableColumns.length} align="center">
-                  No data available
-                </TableCell>
-              </TableRow>
-            )}
-          </TableBody>
-        </Table>
-      </TableContainer>
+      <LevelParcelTable
+        years={availableYears}
+        displayData={displayData}
+        normalizationMode={normalizationMode}
+        eventCountLabel={eventCountLabel}
+        describeRecord={describeRecord}
+        totalLabel={totalLabel}
+        averageLabel={averageLabel}
+        exportFileName={`${exportFileName}_${selectedRegion}_${selectedCropType}_${selectedYear}`}
+      />
     </Box>
   );
 };

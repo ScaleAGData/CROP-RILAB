@@ -9,9 +9,10 @@ import {
 import BottomNavigationAction from '@mui/material/BottomNavigationAction';
 import BottomNavigation from '@mui/material/BottomNavigation';
 import AgricultureIcon from '@mui/icons-material/Agriculture';
-import { 
+import {
   Sprout,
-  Satellite
+  Satellite,
+  Droplets
 } from 'lucide-react';
 import WaterDropIcon from '@mui/icons-material/WaterDrop';
 import IrrigationComponent from "../metrics/Irrigation";
@@ -20,6 +21,7 @@ import SpraysComponent from "../metrics/Sprays";
 import NDVIComponent from "../metrics/Ndvi";
 import FertilizationComponent from "../metrics/Fertilizations";
 import TiffMapServerLinks from "../metrics/TiffMapServerLinks";
+import WaterProductivityComponent from "../metrics/WaterProductivity";
 import OpacityIcon from '@mui/icons-material/Opacity';
 import DescriptionIcon from '@mui/icons-material/Description';
 
@@ -39,6 +41,8 @@ export default function AnalysisTabs({ cropStats }) {
       case 4: 
         return <NDVIComponent />;
       case 5:
+        return <WaterProductivityComponent />;
+      case 6:
         return <TiffMapServerLinks />;
       default:
         return null;
@@ -82,6 +86,7 @@ export default function AnalysisTabs({ cropStats }) {
             <BottomNavigationAction label="Fertilizations" icon={<Sprout size={27} />} />
             <BottomNavigationAction label="Sprays" icon={<OpacityIcon />} />
             <BottomNavigationAction label="EO Indices" icon={<Satellite size={22} />}/>
+            <BottomNavigationAction label="Water Productivity" icon={<Droplets size={24} />} />
             <BottomNavigationAction label="Tiff Links" icon={<DescriptionIcon size={27} />} />
           </BottomNavigation>
         </Box>

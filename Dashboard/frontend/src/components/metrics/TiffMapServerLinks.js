@@ -26,7 +26,6 @@ const MAPSERVER_BASE_URL =
 // Utility functions
 const generateWcsUrl = (fileName, year, requestType) => {
   const params = new URLSearchParams({
-    map: "/data/mapfile.map",
     SERVICE: "WCS",
     VERSION: "2.0.1",
     REQUEST: requestType,
@@ -126,17 +125,6 @@ const RegionAccordion = ({ region, crops, expanded, onChange }) => (
       {Object.entries(crops).map(([crop, files]) => <CropSection key={crop} crop={crop} files={files} />)}
     </AccordionDetails>
   </Accordion>
-);
-
-const InfoFooter = () => (
-  <Box sx={{ mt: 3, p: 2, bgcolor: (theme) => theme.palette.mode === "dark" ? '#ffffff' : theme.palette.grey[100], borderRadius: 1, border: 1, borderColor: 'divider' }}>
-    <Typography variant="caption" sx={{ color: (theme) => theme.palette.mode === "dark" ? '#000000' : 'text.secondary' }} component="div">
-      <strong>Endpoint:</strong> {MAPSERVER_BASE_URL}<br />
-      <strong>Services:</strong> WCS 2.0.1<br />
-      <strong>Map File:</strong> /data/mapfile.map<br />
-      <strong>Actions:</strong> Click filename to view XML (DescribeCoverage) | Click download icon to get GeoTIFF (GetCoverage)
-    </Typography>
-  </Box>
 );
 
 // Main component

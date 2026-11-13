@@ -36,6 +36,68 @@ if (typeof offlineExportingInit === 'function') {
 
 const xThemeComponents = {};
 
+function EuFundingEmblem() {
+  const stars = Array.from({ length: 12 }, (_, index) => {
+    const angle = (index * 30 - 90) * (Math.PI / 180);
+    const x = 24 + Math.cos(angle) * 8.5;
+    const y = 16 + Math.sin(angle) * 8.5;
+
+    return (
+      <polygon
+        key={index}
+        points="0,-1.8 0.42,-0.58 1.71,-0.58 0.65,0.22 1.06,1.45 0,0.7 -1.06,1.45 -0.65,0.22 -1.71,-0.58 -0.42,-0.58"
+        fill="#ffcc00"
+        transform={`translate(${x} ${y}) rotate(${index * 30})`}
+      />
+    );
+  });
+
+  return (
+    <Box
+      component="svg"
+      role="img"
+      aria-label="European Union emblem"
+      viewBox="0 0 48 32"
+      sx={{
+        width: 48,
+        height: 32,
+        flex: "0 0 auto",
+        borderRadius: 0.5,
+        boxShadow: "0 0 0 1px rgba(0, 0, 0, 0.12)",
+      }}
+    >
+      <title>European Union emblem</title>
+      <rect width="48" height="32" rx="2" fill="#034ea2" />
+      {stars}
+    </Box>
+  );
+}
+
+function FundingAcknowledgement() {
+  return (
+    <Stack
+      direction="row"
+      spacing={1}
+      sx={{
+        alignItems: "center",
+        maxWidth: { xs: "100%", md: "62%" },
+      }}
+    >
+      <EuFundingEmblem />
+      <Typography
+        variant="caption"
+        sx={{
+          lineHeight: 1.25,
+          textAlign: { xs: "left", md: "inherit" },
+        }}
+      >
+        This project has received funding from the European Union's Horizon 
+        research and innovation programme under grant agreement No 101086355.
+      </Typography>
+    </Stack>
+  );
+}
+
 export default function Dashboard(props) {
   const [isSignedIn, setIsSignedIn] = useState(true);
 
@@ -56,7 +118,6 @@ export default function Dashboard(props) {
                 backgroundColor: theme.vars
                   ? `rgba(${theme.vars.palette.background.default} / 1)`
                   : alpha(theme.palette.background.default, 1),
-                overflow: "auto",
               })}
             >
               <Stack
@@ -92,18 +153,29 @@ export default function Dashboard(props) {
                 component="footer"
                 sx={{
                   width: "100%",
-                  position: "fixed",
-                  bottom: 0,
-                  left: 0,
-                  zIndex: 1000,
+                  mt: 4,
                   px: 1,
+                  py: 0.5,
                   backgroundColor: "background.paper",
                   boxShadow: 1,
                 }}
               >
                 <Divider sx={{ mb: 0.5 }} />
-                <Typography variant="body2" color="palette.light" align="right">
-                  Copyright © 2024{" "}
+                <Stack
+                  direction={{ xs: "column", md: "row" }}
+                  spacing={{ xs: 0.5, md: 2 }}
+                  sx={{
+                    alignItems: { xs: "flex-start", md: "center" },
+                    justifyContent: "space-between",
+                  }}
+                >
+                  <FundingAcknowledgement />
+                  <Typography
+                    variant="body2"
+                    align="right"
+                    sx={{ width: { xs: "100%", md: "auto" } }}
+                  >
+                    Copyright {"\u00a9"} 2024{" "}
                   <Link
                     href="https://scaleagdata.eu/en"
                     color="primary"
@@ -114,7 +186,8 @@ export default function Dashboard(props) {
                     The ScaleAgData
                   </Link>{" "}
                   project. All rights reserved.
-                </Typography>
+                  </Typography>
+                </Stack>
               </Box>
             </Box>
           </Box>

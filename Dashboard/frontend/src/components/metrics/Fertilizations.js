@@ -1,24 +1,51 @@
 import React, { useMemo, useRef } from "react";
 import {
   Box,
-  Paper,
-  Table,
-  TableBody,
-  TableCell,
-  TableContainer,
-  TableHead,
-  TableRow,
-  IconButton,
-  Tooltip
+  Paper
 } from "@mui/material";
 import HighchartsReact from "highcharts-react-official";
 import Highcharts from "highcharts";
 import { useSelection } from "../navigation/AnalysisLevel";
 import { translate, mapping } from "../utils/translations";
 import combined_data from "../../dataset/output_data.json";
-import * as XLSX from "xlsx";
-import FileDownloadIcon from "@mui/icons-material/FileDownload";
-import { getBaselineMultiplier } from "../utils/dataProcessing";
+import {
+  processAllYearsData,
+  calculateAverageBaseline,
+  calculateYearlyBaselines,
+  calculateYearlyAverageBaselines,
+  getDisplayData
+} from "../utils/dataProcessing";
+import {
+  createAggregatedChartOptions,
+  createYearlyBaselineChartOptions
+} from "../utils/chartConfig";
+import LevelParcelTable from "./LevelParcelTable";
+
+// Fertilizer dose (lubrDose) is already recorded per stremma - almost every
+// record carries magnReferenceDose: "Στρέμμα" - same as harvest/irrigation.
+// So it must be averaged across parcels (perParcel), not divided by real
+// area again, which would double-normalize an already-per-stremma value.
+const NORMALIZATION_MODE = "perParcel";
+
+const convertToKilogram = (dose, unit) => {
+  if (!unit) return dose;
+  const unitLower = unit.toLowerCase();
+
+  if (unitLower === 'ml') return dose / 1000;
+  if (unitLower === 'cc') return dose / 1000;
+  if (unitLower === 'kg') return dose;
+  if (unitLower === 'gr' || unitLower === 'g') return dose / 1000;
+  if (unitLower === 'l' || unitLower === 'lt') return dose;
+
+  return dose;
+};
+
+const fertilizationValueExtractor = (record) =>
+  convertToKilogram(parseFloat(record.lubrDose) || 0, record.magnSymbol);
+
+// Shown under each parcel in the table: product and recorded dose per stremma
+const describeFertilization = (record) =>
+  `${record.tradeName || record.lutyDescription || "-"} · ${parseFloat(record.lubrDose) || 0} ${record.magnSymbol || ""}/stremma`;
 
 const FertilizationComponent = () => {
   const { selectedRegion, selectedYear, selectedCropType, parcelData } = useSelection(); 
@@ -59,19 +86,6 @@ const FertilizationComponent = () => {
   const dataKey = useMemo(() => {
     return `fertilization_${selectedRegion}_${selectedCropType}_Pilot_${displayYear}`;
   }, [selectedRegion, selectedCropType, displayYear]);
-
-  const convertToKilogram = (dose, unit) => {
-    if (!unit) return dose;
-    const unitLower = unit.toLowerCase();
-    
-    if (unitLower === 'ml') return dose / 1000;
-    if (unitLower === 'cc') return dose / 1000;
-    if (unitLower === 'kg') return dose;
-    if (unitLower === 'gr' || unitLower === 'g') return dose / 1000;
-    if (unitLower === 'l' || unitLower === 'lt') return dose;
-    
-    return dose;
-  };
 
   const { aggregatedData, flatData } = useMemo(() => {
     const fertilizationData = combined_data["events_data"][dataKey] || [];
@@ -152,314 +166,73 @@ const FertilizationComponent = () => {
     };
   }, [dataKey]);
 
-  // Multi-year data processing for both Pilot and Adjacent
-  const multiYearData = useMemo(() => {
-    const yearsData = {};
-    
-    yearsToDisplay.forEach(year => {
-      yearsData[year] = { Pilot: null, Adjacent: null };
-      
-      ["Pilot", "Adjacent"].forEach(level => {
-        const yearDataKey = `fertilization_${selectedRegion}_${selectedCropType}_${level}_${year}`;
-        const fertilizationData = combined_data["events_data"][yearDataKey] || [];
-        
-        const yearFlatData = fertilizationData.flat();
-        
-        const aggregated = yearFlatData.reduce((acc, record) => {
-          if (!record) return acc;
-          const fertilizerType = record.lutyDescription;
-          const dose = parseFloat(record.lubrDose) || 0;
-          const unit = record.magnSymbol;
-          const doseInKg = convertToKilogram(dose, unit);
-          
-          if (!acc[fertilizerType]) {
-            acc[fertilizerType] = 0;
-          }
-          acc[fertilizerType] += doseInKg;
-          return acc;
-        }, {});
-        
-        const totalDose = Object.values(aggregated).reduce((sum, val) => sum + val, 0);
-        const uniqueParcelCount = new Set(yearFlatData.map(item => item.parcelId)).size;
-        
-        // Calculate total parcel area for this level/year
-        const totalParcelArea = yearFlatData.reduce((sum, record) => {
-          if (!record || !record.parcelId) return sum;
-          // Using a Set to avoid counting the same parcel multiple times
-          return sum;
-        }, 0);
-        
-        // For simplicity, assume each parcel contributes equally
-        const avgPerParcel = uniqueParcelCount > 0 ? totalDose / uniqueParcelCount : 0;
-        
-        yearsData[year][level] = {
-          totalDose,
-          avgPerParcel,
-          parcelCount: uniqueParcelCount,
-          totalParcelArea: uniqueParcelCount, // Assuming 1 stremma per parcel
-          fertilizers: aggregated
-        };
-      });
-    });
-    
-    return yearsData;
-  }, [yearsToDisplay, selectedRegion, selectedCropType]);
+  // Multi-year data processing for both Pilot and Adjacent, using the same
+  // shared utilities as Harvest/Irrigation (dataProcessing.js + chartConfig.js)
+  const allYearsData = useMemo(
+    () => processAllYearsData(
+      availableYears,
+      selectedRegion,
+      selectedCropType,
+      "fertilization",
+      fertilizationValueExtractor
+    ),
+    [availableYears, selectedRegion, selectedCropType]
+  );
 
-  // Calculate baseline using ALL available years
-  const averageBaseline = useMemo(() => {
-    let totalDose = 0;
-    let totalParcels = 0;
+  const displayData = useMemo(
+    () => getDisplayData(yearsToDisplay, allYearsData),
+    [yearsToDisplay, allYearsData]
+  );
 
-    availableYears.forEach(year => {
-      const yearData = multiYearData[year];
-      if (!yearData) return;
-      
-      totalDose += (yearData.Pilot?.totalDose || 0) + (yearData.Adjacent?.totalDose || 0);
-      totalParcels += (yearData.Pilot?.parcelCount || 0) + (yearData.Adjacent?.parcelCount || 0);
-    });
+  // Uses yearsToDisplay (not availableYears) so a single-year selection shows
+  // that year's own rate instead of the rate pooled across all history.
+  const averageBaseline = useMemo(
+    () => calculateAverageBaseline(yearsToDisplay, allYearsData, NORMALIZATION_MODE),
+    [yearsToDisplay, allYearsData]
+  );
 
-    const avgPerParcel = totalParcels > 0 ? totalDose / totalParcels : 0;
+  const yearlyBaselines = useMemo(
+    () => calculateYearlyBaselines(availableYears, allYearsData, selectedRegion, selectedCropType, NORMALIZATION_MODE),
+    [availableYears, allYearsData, selectedRegion, selectedCropType]
+  );
 
-    return avgPerParcel;
-  }, [availableYears, multiYearData]);
+  const yearlyAverageBaselines = useMemo(
+    () => calculateYearlyAverageBaselines(availableYears, averageBaseline, selectedRegion, selectedCropType),
+    [availableYears, averageBaseline, selectedRegion, selectedCropType]
+  );
 
-  // Calculate yearly baselines
-  const yearlyBaselines = useMemo(() => {
-    const baselines = {};
-    
-    availableYears.forEach(year => {
-      const yearData = multiYearData[year];
-      if (!yearData) return;
-      
-      const totalValue = (yearData.Pilot?.totalDose || 0) + (yearData.Adjacent?.totalDose || 0);
-      const totalParcelArea = (yearData.Pilot?.totalParcelArea || 0) + (yearData.Adjacent?.totalParcelArea || 0);
-      const multiplier = getBaselineMultiplier(selectedRegion, selectedCropType, year);
-      
-      if (totalParcelArea > 0) {
-        baselines[year] = (totalValue * multiplier) / totalParcelArea;
-      } else {
-        baselines[year] = 0;
-      }
-    });
-    
-    return baselines;
-  }, [availableYears, multiYearData, selectedRegion, selectedCropType]);
+  // Multi-year comparison column chart (Pilot vs Control avg dose)
+  const multiYearChartOptions = useMemo(
+    () => createAggregatedChartOptions({
+      yearsToDisplay,
+      displayData,
+      selectedYear,
+      averageBaseline,
+      unit: "Kg/stremma",
+      title: "Aggregated Fertilizers: Quantitative Analysis",
+      yAxisLabel: "Avg Fertilizer Dose per Parcel (Kg/Stremma)",
+      normalizationMode: NORMALIZATION_MODE
+    }),
+    [yearsToDisplay, displayData, selectedYear, averageBaseline]
+  );
 
-  // Calculate yearly average baselines
-  const yearlyAverageBaselines = useMemo(() => {
-    const baselines = {};
-    
-    availableYears.forEach(year => {
-      const multiplier = getBaselineMultiplier(selectedRegion, selectedCropType, year);
-      baselines[year] = averageBaseline * multiplier;
-    });
-    
-    return baselines;
-  }, [availableYears, averageBaseline, selectedRegion, selectedCropType]);
-
-  // Multi-year comparison column chart
-  const multiYearChartOptions = useMemo(() => {
-    if (yearsToDisplay.length === 0) return null;
-
-    const numCategories = yearsToDisplay.length;
-
-    const series = [
-      {
-        name: "Pilot Parcels",
-        data: yearsToDisplay.map(year => multiYearData[year]?.Pilot?.totalDose || 0),
-        color: "#8884d8",
-        type: "column",
-      },
-      {
-        name: "Control Parcels",
-        data: yearsToDisplay.map(year => multiYearData[year]?.Adjacent?.totalDose || 0),
-        color: "#82ca9d",
-        type: "column",
-      },
-    ];
-
-    if (averageBaseline > 0) {
-      const baselineData_array = numCategories === 1 
-        ? [
-            { x: -0.4, y: averageBaseline },
-            { x: 0.4, y: averageBaseline }
-          ]
-        : yearsToDisplay.map((year, index) => ({ x: index, y: averageBaseline }));
-      
-      series.push({
-        name: "Baseline (Avg Per Parcel - All Years)",
-        data: baselineData_array,
-        type: "line",
-        color: "#888888",
-        dashStyle: "Dash",
-        marker: { enabled: false },
-        enableMouseTracking: true,
-      });
-    }
-
-    return {
-      chart: { type: "column", animation: false },
-      credits: { enabled: false },
-      title: { 
-        text: selectedYear === "all" || !selectedYear 
-          ? "Aggregated Fertilizers: Quantitative Analysis (All Years)" 
-          : `Aggregated Fertilizers: Quantitative Analysis (${selectedYear})`
-      },
-      xAxis: {
-        categories: yearsToDisplay,
-        title: { text: "Year" },
-        min: -0.5, 
-        max: numCategories > 0 ? numCategories - 0.5 : 0,
-        startOnTick: false, 
-        endOnTick: false,
-        showLastLabel: true,
-      },
-      yAxis: {
-        title: { text: "Total Fertilizer Dose (Kg/Stremma)" }
-      },
-      tooltip: {
-        shared: true,
-        useHTML: true,
-        padding: 8,
-        formatter: function() {
-          if (!this.points || this.points.length === 0) return '';
-          
-          const year = this.x;
-          const isSingleYear = numCategories === 1;
-          const pointIndex = isSingleYear ? 0 : this.points[0].point.index;
-          let s = `<div><b>${year}</b><br/>`;
-          
-          if (isSingleYear && this.points) {
-            const pilotValue = multiYearData[year]?.Pilot?.totalDose || 0;
-            const pilotParcels = multiYearData[year]?.Pilot?.parcelCount || 0;
-            const adjacentValue = multiYearData[year]?.Adjacent?.totalDose || 0;
-            const adjacentParcels = multiYearData[year]?.Adjacent?.parcelCount || 0;
-            const totalParcels = pilotParcels + adjacentParcels;
-            
-            s += `<span style="color:#8884d8">●</span> Pilot Parcels: <b>${pilotValue.toFixed(1)} Kg/stremma</b> (${pilotParcels} parcels)<br/>`;
-            s += `<span style="color:#82ca9d">●</span> Control Parcels: <b>${adjacentValue.toFixed(1)} Kg/stremma</b> (${adjacentParcels} parcels)<br/>`;
-            s += `<span style="color:#888888">●</span> Baseline: <b>${averageBaseline.toFixed(1)} Kg/stremma</b> (avg per parcel across all years)<br/>`;
-            s += `<span style="color:#333333">●</span> Total Parcels: <b>${totalParcels}</b><br/>`;
-          } else {
-            const year = yearsToDisplay[pointIndex];
-            const pilotParcels = multiYearData[year]?.Pilot?.parcelCount || 0;
-            const adjacentParcels = multiYearData[year]?.Adjacent?.parcelCount || 0;
-            
-            this.points.forEach(point => {
-              if (point.series.name.includes('Baseline')) {
-                s += `<span style="color:${point.color}">●</span> ${point.series.name}: <b>${Highcharts.numberFormat(point.y, 1)} Kg/stremma</b> (avg per parcel across all years)<br/>`;
-              } else {
-                const parcels = point.series.name.includes('Pilot') ? pilotParcels : adjacentParcels;
-                s += `<span style="color:${point.color}">●</span> ${point.series.name}: <b>${Highcharts.numberFormat(point.y, 1)} Kg/stremma</b> (${parcels} parcels)<br/>`;
-              }
-            });
-            
-            const totalParcels = pilotParcels + adjacentParcels;
-            s += `<span style="color:#333333">●</span> Total Parcels: <b>${totalParcels}</b>`;
-          }
-          
-          s += '</div>';
-          return s;
-        }
-      },
-      plotOptions: {
-        column: {
-          dataLabels: {
-            enabled: true,
-            format: "{point.y:.1f}"
-          }
-        },
-        line: {
-          dataLabels: { enabled: false },
-        }
-      },
-      series: series
-    };
-  }, [yearsToDisplay, multiYearData, selectedYear, averageBaseline]);
-
-  // Yearly Baseline Chart
-  const yearlyBaselineChartOptions = useMemo(() => {
-    if (yearsToDisplay.length === 0) return null;
-
-    const isSingleYear = yearsToDisplay.length === 1;
-
-    return {
-      chart: { animation: false },
-      credits: { enabled: false },
-      title: {
-        text: selectedYear === "all" || !selectedYear 
-          ? "Yearly Baseline Fertilizer Consumption (All Years)" 
-          : `Yearly Baseline Fertilizer Consumption (${selectedYear})`,
-      },
-      xAxis: {
-        categories: yearsToDisplay,
-        title: { text: "Year" },
-        min: isSingleYear ? -0.5 : undefined,
-        max: isSingleYear ? 0.5 : undefined,
-      },
-      yAxis: {
-        title: { text: "Baseline Fertilizer Consumption (Kg/Stremma)" },
-      },
-      tooltip: {
-        shared: true,
-        useHTML: true,
-        padding: 8,
-        formatter: function() {
-          if (!this.points || this.points.length === 0) return '';
-          
-          const year = isSingleYear ? yearsToDisplay[0] : yearsToDisplay[this.points[0].point.index];
-          const yearData = multiYearData[year];
-          const totalValue = (yearData?.Pilot?.totalDose || 0) + (yearData?.Adjacent?.totalDose || 0);
-          const totalParcelArea = (yearData?.Pilot?.totalParcelArea || 0) + (yearData?.Adjacent?.totalParcelArea || 0);
-          const multiplier = getBaselineMultiplier(selectedRegion, selectedCropType, year);
-          const yearlyBaseline = yearlyBaselines[year] || 0;
-          const avgBaseline = yearlyAverageBaselines[year] || 0;
-          
-          let s = `<div><b>${year}</b><br/>`;
-          s += `<span style="color:#ff7c43">●</span> Yearly Baseline: <b>${yearlyBaseline.toFixed(1)}</b><br/>`;
-          s += `<span style="color:#666">Formula: (${totalValue.toFixed(1)} × ${multiplier.toFixed(1)}) / ${totalParcelArea.toFixed(1)} stremma</span><br/>`;
-          s += `<span style="color:#4a90e2">●</span> Avg Baseline × Crop Area: <b>${avgBaseline.toFixed(1)}</b><br/>`;
-          s += `<span style="color:#666">Formula: ${averageBaseline.toFixed(1)} × ${multiplier.toFixed(1)} stremma</span><br/>`;
-          s += `<span style="color:#666">Crop Area: ${multiplier.toFixed(1)} stremma</span>`;
-          s += `</div>`;
-          
-          return s;
-        }
-      },
-      plotOptions: {
-        line: {
-          dataLabels: { 
-            enabled: true, 
-            format: "{point.y:.1f}",
-            style: {
-              fontWeight: 'bold'
-            }
-          },
-          marker: {
-            enabled: true,
-            radius: 4
-          }
-        },
-      },
-      series: [
-        {
-          name: "Yearly Baseline",
-          data: yearsToDisplay.map(year => yearlyBaselines[year] || 0),
-          type: "line",
-          color: "#ff7c43",
-          lineWidth: 3
-        },
-        {
-          name: "Avg Baseline × Crop Area",
-          data: yearsToDisplay.map(year => yearlyAverageBaselines[year] || 0),
-          type: "line",
-          color: "#4a90e2",
-          lineWidth: 3,
-          dashStyle: "ShortDash"
-        }
-      ],
-    };
-  }, [yearsToDisplay, multiYearData, selectedYear, yearlyBaselines, yearlyAverageBaselines, averageBaseline, selectedRegion, selectedCropType]);
+  // Yearly Baseline Chart (district-wide extrapolation)
+  const yearlyBaselineChartOptions = useMemo(
+    () => createYearlyBaselineChartOptions({
+      yearsToDisplay,
+      displayData,
+      selectedYear,
+      yearlyBaselines,
+      yearlyAverageBaselines,
+      averageBaseline,
+      region: selectedRegion,
+      cropType: selectedCropType,
+      title: "Yearly Baseline Fertilizer Consumption",
+      yAxisLabel: "Baseline Fertilizer Consumption (Kg)",
+      normalizationMode: NORMALIZATION_MODE
+    }),
+    [yearsToDisplay, displayData, selectedYear, yearlyBaselines, yearlyAverageBaselines, averageBaseline, selectedRegion, selectedCropType]
+  );
 
   const gridColumns = useMemo(
     () => Math.max(1, aggregatedData.length),
@@ -616,55 +389,6 @@ const FertilizationComponent = () => {
     };
   }, [yearsToDisplay, selectedRegion, selectedCropType, selectedYear]);
 
-  const tableRows = useMemo(() => {
-    return yearsToDisplay.flatMap((year) => {
-      const yearData = multiYearData[year];
-      if (!yearData) return [];
-      
-      const rows = [];
-      
-      if (yearData.Pilot) {
-        rows.push({
-          key: `${year}-Pilot`,
-          year,
-          level: "Pilot Parcels",
-          totalDose: yearData.Pilot.totalDose,
-          parcelCount: yearData.Pilot.parcelCount,
-          avgPerParcel: yearData.Pilot.avgPerParcel,
-        });
-      }
-      
-      if (yearData.Adjacent) {
-        rows.push({
-          key: `${year}-Adjacent`,
-          year,
-          level: "Control Parcels",
-          totalDose: yearData.Adjacent.totalDose,
-          parcelCount: yearData.Adjacent.parcelCount,
-          avgPerParcel: yearData.Adjacent.avgPerParcel,
-        });
-      }
-      
-      return rows;
-    });
-  }, [yearsToDisplay, multiYearData]);
-
-  const exportToExcel = () => {
-    const ws = XLSX.utils.json_to_sheet(
-      tableRows.map(row => ({
-        'Year': row.year,
-        'Analysis Level': row.level,
-        'Total Dose (Kg/Stremma)': row.totalDose.toFixed(1),
-        'Total Parcels': row.parcelCount,
-        'Avg Dose per Parcel (Kg/Stremma)': row.avgPerParcel.toFixed(1),
-      }))
-    );
-    
-    const wb = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(wb, ws, "Fertilization Data");
-    XLSX.writeFile(wb, `fertilization_data_${selectedRegion}_${selectedCropType}_${selectedYear}.xlsx`);
-  };
-
   return (
     <Box
       sx={{
@@ -678,9 +402,9 @@ const FertilizationComponent = () => {
       {/* Multi-Year Comparison Chart */}
       {multiYearChartOptions && (
         <Box sx={{ display: "flex", gap: 1}}>
-          <Paper sx={{ flex: 1 }}>
-            <HighchartsReact 
-              highcharts={Highcharts} 
+          <Paper sx={{ flex: 1, position: "relative" }}>
+            <HighchartsReact
+              highcharts={Highcharts}
               options={multiYearChartOptions}
               ref={multiYearChartRef}
               immutable={true}
@@ -690,7 +414,7 @@ const FertilizationComponent = () => {
       )}
 
       {/* Yearly Baseline Chart */}
-      {yearlyBaselineChartOptions && (selectedYear === "all" || !selectedYear) && (
+      {yearlyBaselineChartOptions && (
         <Paper sx={{ p: 0, mb: 1, mt: 1 }}>
           <HighchartsReact 
             key={`baseline-chart-${yearsToDisplay.join('-')}`}
@@ -740,91 +464,17 @@ const FertilizationComponent = () => {
       )}
 
       {/* Data Table */}
-      <TableContainer
-        component={Paper}
-        sx={{
-          mb: 0.5,
-          mx: "auto",
-          borderRadius: 0,
-        }}
-      >
-        <Table
-          stickyHeader
-          sx={{
-            borderCollapse: "separate",
-            borderSpacing: 0,
-            "& th, & td": {
-              border: (theme) => `1px solid ${theme.palette.divider}`,
-            },
-            "& th": {
-              backgroundColor: (theme) =>
-                theme.palette.mode === "dark"
-                  ? theme.palette.grey[700]
-                  : theme.palette.grey[200],
-              color: (theme) =>
-                theme.palette.mode === "dark"
-                  ? theme.palette.common.white
-                  : theme.palette.common.black,
-              fontWeight: "500",
-              textTransform: "none",
-              letterSpacing: "0.5px",
-              padding: "12px",
-            },
-            "& tbody tr:hover": {
-              backgroundColor: (theme) =>
-                theme.palette.mode === "dark"
-                  ? theme.palette.grey[700]
-                  : theme.palette.grey[100],
-            },
-          }}
-        >
-          <TableHead>
-            <TableRow>
-              <TableCell>Year</TableCell>
-              <TableCell>Analysis Level</TableCell>
-              <TableCell>Total Dose (Kg/Stremma)</TableCell>
-              <TableCell>Total Parcels</TableCell>
-              <TableCell>
-                Avg Dose per Parcel (Kg/Stremma)
-                <Tooltip title="Export to Excel">
-                  <IconButton
-                    size="small"
-                    onClick={exportToExcel}
-                    disabled={tableRows.length === 0}
-                    sx={{ 
-                      position: "absolute",
-                    right: 8,
-                    top: "50%",
-                    transform: "translateY(-50%)",
-                  }}
-                >
-                  <FileDownloadIcon fontSize="small" />
-                </IconButton>
-              </Tooltip>
-              </TableCell>
-            </TableRow>
-          </TableHead>
-          <TableBody>
-            {tableRows.length > 0 ? (
-              tableRows.map(row => (
-                <TableRow key={row.key}>
-                  <TableCell>{row.year}</TableCell>
-                  <TableCell>{row.level}</TableCell>
-                  <TableCell>{row.totalDose.toFixed(1)}</TableCell>
-                  <TableCell>{row.parcelCount}</TableCell>
-                  <TableCell>{row.avgPerParcel.toFixed(1)}</TableCell>
-                </TableRow>
-              ))
-            ) : (
-              <TableRow>
-                <TableCell colSpan={5} align="center">
-                  No fertilization data available
-                </TableCell>
-              </TableRow>
-            )}
-          </TableBody>
-        </Table>
-      </TableContainer>
+      <LevelParcelTable
+        years={yearsToDisplay}
+        displayData={displayData}
+        normalizationMode={NORMALIZATION_MODE}
+        eventCountLabel="Number of Applications"
+        describeRecord={describeFertilization}
+        totalLabel="Total Dose (Kg/Stremma)"
+        averageLabel="Avg Dose per Parcel (Kg/Stremma)"
+        exportFileName={`fertilization_data_${selectedRegion}_${selectedCropType}_${selectedYear}`}
+        emptyMessage="No fertilization data available"
+      />
     </Box>
   );
 };
